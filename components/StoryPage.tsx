@@ -41,7 +41,7 @@ const StoryPage: React.FC<StoryPageProps> = ({ onNavigate }) => {
                   <div className="absolute inset-0 bg-gradient-to-t from-brand-navy/40 to-transparent z-10"></div>
                   {/* USER INSTRUCTION: Save your red background image as 'arshad.png' in the public folder */}
                   <img 
-                    src="/images/arshad-profile.jpg" 
+                    src="/arshad-profile.jpg" 
                     alt="Arshad - The Discipline Built Man" 
                     className="w-full h-[600px] object-cover object-top transition-all duration-700 hover:scale-105"
                   />
