@@ -32,8 +32,55 @@ export const CameraModule: React.FC = () => {
     setResult(null);
 
     try {
-      // Initialize Gemini
-      const genAI = new GoogleGenerativeAI(process.env.VITE_GEMINI_API_KEY || '');
+      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+      
+      // Check if API key is available and not placeholder
+      if (!apiKey || apiKey === 'PLACEHOLDER_API_KEY') {
+        // Demo mode - simulate API response
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate API delay
+        
+        // Generate demo response based on image name or random
+        const demoFoods = [
+          {
+            foodName: "Mixed Vegetable Curry",
+            calories: 280,
+            macros: { protein: 12, carbs: 35, fats: 8 },
+            description: "Healthy Indian curry with mixed vegetables"
+          },
+          {
+            foodName: "Chicken Biryani",
+            calories: 450,
+            macros: { protein: 25, carbs: 55, fats: 12 },
+            description: "Aromatic basmati rice with spiced chicken"
+          },
+          {
+            foodName: "Dal Tadka",
+            calories: 180,
+            macros: { protein: 14, carbs: 28, fats: 4 },
+            description: "Traditional lentil curry with spices"
+          },
+          {
+            foodName: "Roti with Sabzi",
+            calories: 320,
+            macros: { protein: 10, carbs: 45, fats: 8 },
+            description: "Whole wheat flatbread with vegetable curry"
+          }
+        ];
+        
+        const randomFood = demoFoods[Math.floor(Math.random() * demoFoods.length)];
+        
+        setResult({
+          foodName: randomFood.foodName,
+          calories: randomFood.calories,
+          macros: randomFood.macros,
+          measures: randomFood.description + " (Demo Mode)"
+        });
+        
+        return;
+      }
+
+      // Initialize Gemini with real API
+      const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
       // Convert file to Base64
@@ -49,7 +96,19 @@ export const CameraModule: React.FC = () => {
         reader.readAsDataURL(file);
       });
 
-      const prompt = "Analyze this image. If it contains food, return a JSON object with: 'foodName' (specific dish name, e.g. 'Butter Chicken'), 'calories' (estimated integer), 'macros' (object with protein, carbs, fats as integers), and 'description' (short 1 sentence summary). If it is NOT food, return 'foodName': 'Not Food'.";
+      const prompt = `Analyze this food image and return ONLY a valid JSON object with this exact structure:
+{
+  "foodName": "specific dish name (e.g. Butter Chicken)",
+  "calories": 300,
+  "macros": {
+    "protein": 25,
+    "carbs": 35,
+    "fats": 12
+  },
+  "description": "brief description"
+}
+
+If this is not food, return: {"foodName": "Not Food"}`;
 
       // Call Gemini with image
       const result = await model.generateContent([
@@ -68,14 +127,19 @@ export const CameraModule: React.FC = () => {
       // Try to extract JSON from the response
       let data;
       try {
+        // Clean the response text
+        const cleanText = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+        
         // Look for JSON in the response
-        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        const jsonMatch = cleanText.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
           data = JSON.parse(jsonMatch[0]);
         } else {
-          throw new Error("No JSON found in response");
+          // Try parsing the entire cleaned text
+          data = JSON.parse(cleanText);
         }
       } catch (parseError) {
+        console.error('Parse error:', parseError);
         throw new Error("Could not parse AI response");
       }
       
@@ -91,7 +155,7 @@ export const CameraModule: React.FC = () => {
       });
 
     } catch (err) {
-      console.error(err);
+      console.error('API Error:', err);
       setError('Could not identify food. Please try a clearer photo of a meal.');
     } finally {
       setLoading(false);
@@ -116,7 +180,9 @@ export const CameraModule: React.FC = () => {
         <div className="flex-1 text-center md:text-left space-y-4">
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-brand-dark border border-gray-700 rounded-full">
             <span className="w-2 h-2 rounded-full bg-brand-green animate-pulse"></span>
-            <span className="text-xs font-mono text-gray-300 uppercase tracking-wide">Gemini Vision AI Active</span>
+            <span className="text-xs font-mono text-gray-300 uppercase tracking-wide">
+              {import.meta.env.VITE_GEMINI_API_KEY === 'PLACEHOLDER_API_KEY' ? 'Demo Mode Active' : 'Gemini Vision AI Active'}
+            </span>
           </div>
           
           <h3 className="text-3xl font-heading font-bold text-white">
